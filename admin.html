@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>RSVP Admin</title>
+<style>body{font-family:system-ui,"Segoe UI",sans-serif;margin:0;background:#fafafa;color:#1c1c1c}.in{max-width:780px;margin:0 auto;padding:28px 18px}
+h1{font-weight:500}.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1;min-width:140px;padding:16px;border:1px solid #ccc;background:#fff;border-radius:6px}.row b{display:block;font-size:30px}
+input,button{font:inherit;padding:10px 14px;border:1px solid #888;border-radius:4px;background:#fff}button{cursor:pointer}button.d{border:0;color:#a33;background:none;text-decoration:underline;padding:0}
+table{width:100%;border-collapse:collapse;margin-top:16px;background:#fff}td,th{padding:10px 8px;border-bottom:1px solid #e3e3e3;text-align:start;font-size:14px}.box{overflow-x:auto}#app{display:none}</style></head><body><div class="in">
+<h1>RSVP Dashboard</h1>
+<form id="lg"><input type="password" id="pw" placeholder="Admin password" autocomplete="current-password"> <button>Login</button> <span id="er" style="color:#a33"></span></form>
+<div id="app"><div class="row"><div><b id="sR">0</b>Responses</div><div><b id="sG">0</b>Total guests</div></div>
+<p><button id="csv">Download CSV</button> <button id="rf">Refresh</button></p>
+<div class="box"><table><thead><tr><th>Name</th><th>Guests</th><th>Lang</th><th>Date</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div></div>
+<script>
+const $=i=>document.getElementById(i);let pw="",docs=[];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function load(){const r=await fetch("/api/admin",{headers:{"x-admin-password":pw}});if(!r.ok)throw 0;docs=await r.json();
+ $("rows").innerHTML=docs.map(d=>`<tr><td>${esc(d.name)}</td><td>${d.count}</td><td>${d.lang||""}</td><td>${new Date(d.created_at).toLocaleString()}</td><td><button class="d" data-d="${d.id}">Delete</button></td></tr>`).join("");
+ $("sR").textContent=docs.length;$("sG").textContent=docs.reduce((a,d)=>a+d.count,0);
+ document.querySelectorAll("[data-d]").forEach(b=>b.onclick=async()=>{if(confirm("Delete this response?")){await fetch("/api/admin?id="+b.dataset.d,{method:"DELETE",headers:{"x-admin-password":pw}});load()}})}
+$("lg").onsubmit=async e=>{e.preventDefault();pw=$("pw").value;try{await load();$("lg").style.display="none";$("app").style.display="block"}catch(x){$("er").textContent="Wrong password"}};
+$("rf").onclick=load;
+$("csv").onclick=()=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';const c="\ufeffName,Guests,Language,Date\n"+docs.map(d=>[q(d.name),d.count,d.lang||"",d.created_at].join(",")).join("\n");
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([c],{type:"text/csv"}));a.download="rsvp.csv";a.click()};
+</script></body></html>
